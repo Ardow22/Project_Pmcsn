@@ -92,6 +92,7 @@ public void createInterval(String directory, String filename, int type) {
         } 
         else if (type == 2) {
             printFormulario2(filename, mean, w, df);
+        	saveToCsv2(filename, mean, w, df);
         }
 
 
@@ -185,6 +186,51 @@ public void createInterval(String directory, String filename, int type) {
         if (centro != null && misura != null) {
             System.out.println("Centro: " + centro);
             System.out.println(misura + ": " + df.format(mean) + " +/- " + df.format(w));
+        }
+    }
+    
+    private void saveToCsv2(String filename, double mean, double w, DecimalFormat df) {
+        String fname = filename.toLowerCase();
+
+        String centro = null;
+        String misura = "E(Tq)";
+
+        // Identificazione del centro
+        if (fname.contains("sicurezza")) {
+            centro = "Sicurezza";
+        } else if (fname.contains("biglietteria")) {
+            centro = "Biglietteria";
+        } else if (fname.contains("controlli")) {
+            centro = "Controlli";
+        } else if (fname.contains("mariostandard")) {
+            centro = "Mario Kart Standard";
+        } else if (fname.contains("marioexpress")) {
+            centro = "Mario Kart Express";
+        } else if (fname.contains("hpstandard")) {
+            centro = "Harry Potter Standard";
+        } else if (fname.contains("hpexpress")) {
+            centro = "Harry Potter Express";
+        }
+
+        if (centro != null) {
+            File csvFile = new File("Medie_campionarie_tq.csv");
+            boolean fileExists = csvFile.exists();
+
+            // Usiamo il secondo parametro 'true' in FileWriter per abilitare la modalità APPEND
+            try (PrintWriter pw = new PrintWriter(new FileWriter(csvFile, true))) {
+                
+                // Scrive l'intestazione solo se il file viene creato per la prima volta
+                if (!fileExists) {
+                    pw.println("Centro,Misura,Media,HalfWidth");
+                }
+
+                // Scrive la riga con i dati formattati
+                // Nota: Usiamo la virgola o il punto e virgola ';' per separare le colonne
+                pw.println(centro + ";" + misura + ";" + df.format(mean) + ";" + df.format(w));
+
+            } catch (IOException e) {
+                System.err.println("Errore durante la scrittura del file CSV: " + e.getMessage());
+            }
         }
     }
 

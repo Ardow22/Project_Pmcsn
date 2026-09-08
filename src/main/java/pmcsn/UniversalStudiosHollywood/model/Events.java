@@ -29,32 +29,6 @@ public class Events {
       * 
       */
      
-     /* EVENTI DEBUG
-      * 
-      *
-      * CONTROLLO SICUREZZA
-      * 0 arrivo
-      * 1-2 servizio
-      * 
-      * BIGLIETTERIA FISICA
-      * 3 arrivo
-      * 4-5 servizio
-      * 
-      * CONTROLLO BIGLIETTI
-      * 6 arrivo
-      * 7-8 servizio
-      * 
-      * SUPER MARIO
-      * 9 arrivo standard
-      * 10 arrivo express
-      * 11 servizio
-      * 
-      * HARRY POTTER
-      * 12 arrivo standard
-      * 13 arrivo express
-      * 14 servizio
-      * 
-      */
      
      
      public static int ARRIVAL_EVENT_SICUREZZA = 1;

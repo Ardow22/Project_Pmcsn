@@ -3,18 +3,17 @@ package pmcsn.UniversalStudiosHollywood;
 import java.io.IOException;
 import java.util.Scanner;
 
-import pmcsn.UniversalStudiosHollywood.controller.ComputationalModelController;
+
 import pmcsn.UniversalStudiosHollywood.controller.ExperimentsController;
 import pmcsn.UniversalStudiosHollywood.controller.ExperimentsProva;
 import pmcsn.UniversalStudiosHollywood.controller.TransientController;
-import pmcsn.UniversalStudiosHollywood.controller.VerificaController;
 import pmcsn.UniversalStudiosHollywood.controller.VerificaControllerNew;
 import pmcsn.UniversalStudiosHollywood.utils.Autocorrelation;
 
 public class App {
 	
     public static void main( String[] args ) {
-        /*Scanner input = new Scanner(System.in);
+        Scanner input = new Scanner(System.in);
         System.out.println("Benvenuto nel simulatore PMCSN!");
         System.out.println("Puoi scegliere tra le seguenti opzioni: ");
         System.out.println("1 - Verifica");        
@@ -27,7 +26,7 @@ public class App {
         switch(choice) {
         case "1":
         	System.out.println("Hai scelto la verifica");
-        	VerificaController vc = new VerificaController();
+        	VerificaControllerNew vc = new VerificaControllerNew();
         	vc.startAnalysis();
         	break;
         
@@ -46,9 +45,9 @@ public class App {
         default:
         	System.out.println("Non hai scelto nulla, chiusura del programma");
         	System.exit(0);
-        }*/
+        }
     	
-    	VerificaControllerNew vc = new VerificaControllerNew();
+    	/*VerificaControllerNew vc = new VerificaControllerNew();
     	vc.startAnalysis();
     	Autocorrelation a = new Autocorrelation();
     	try {
@@ -56,10 +55,10 @@ public class App {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-    	//TransientController tc = new TransientController();
-    	//tc.startAnalysis();
-    	//ExperimentsProva ec = new ExperimentsProva();
-    	//ec.startAnalysis();        
+		}*/
+    	/*TransientController tc = new TransientController();
+    	tc.startAnalysis();*/
+    	/*ExperimentsProva ec = new ExperimentsProva();
+    	ec.startAnalysis(); */       
     }
 }

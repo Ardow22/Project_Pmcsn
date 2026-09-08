@@ -5,7 +5,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import pmcsn.UniversalStudiosHollywood.libraries.Rngs;
@@ -39,8 +38,8 @@ public class TransientController {
 		seeds[0] = 123456789;
 		Rngs r = new Rngs();
 		
-		for (int i = 0; i < 10; i++) {
-		//for (int i = 0; i < 150; i++) {
+		//for (int i = 0; i < 10; i++) {
+		for (int i = 0; i < 150; i++) {
 			System.out.println("ITERAZIONE: " + i);
 			TransientStats ts = new TransientStats();//va inizializzato dentro al ciclo perché ad ogni nuova run raccolgo nuove statistiche da 0
 			sarrival = START;
@@ -93,12 +92,12 @@ public class TransientController {
 		
 		rng.plantSeeds(seed);
 		
-        MsqEvent[] events = new MsqEvent[ALL_EVENTS_WITH_SAVE_STAT_VERIFICA];
+        MsqEvent[] events = new MsqEvent[ALL_EVENTS_STAT_LAMBDA_VERIFICA];
         MsqSum[] sum = new MsqSum[ALL_EVENTS_VERIFICA];
         Rvms rvms = new Rvms();
         
-        //System.out.println("Lista eventi (incluso SAVE_STAT): ");
-        for (int i = 0; i < ALL_EVENTS_WITH_SAVE_STAT_VERIFICA; i++) {
+        //System.out.println("Lista eventi (incluso SAVE_STAT e LAMBDA): ");
+        for (int i = 0; i < ALL_EVENTS_STAT_LAMBDA_VERIFICA; i++) {
             events[i] = new MsqEvent();
         }
         for (int i = 0; i < ALL_EVENTS_VERIFICA; i++) {
@@ -109,13 +108,20 @@ public class TransientController {
         MsqT t = new MsqT();
         t.current = START;  
         
-        events[0].t = getArrival(rng, sicurezza.getStreamIndex(), t.current);
-        events[0].x = 1;
+     // --- INIZIALIZZAZIONE FASI DI ARRIVO ---
+        int currentPhase = 1;
+        double currentLambda = LAMBDA1;
+     
         
         //EVENTO SAVE_STAT
         //System.out.println("\n------------GENERAZIONE SAVE_STAT----------");        
         events[ALL_EVENTS_VERIFICA].t = INTERVAL_DATA;
         events[ALL_EVENTS_VERIFICA].x = 1;
+        events[ALL_EVENTS_WITH_SAVE_STAT_VERIFICA].t = 3600.0; //l'ultimo elemento è ALL_EVENTS_VERIFICA + 1
+        events[ALL_EVENTS_WITH_SAVE_STAT_VERIFICA].x = 1;
+        
+        events[0].t = getArrival(rng, sicurezza.getStreamIndex(), currentLambda);
+        events[0].x = 1;
 
         
         for (int i = 0; i < ALL_EVENTS_VERIFICA; i++) {
@@ -162,8 +168,46 @@ public class TransientController {
             System.out.println("Siamo all'istante: " + t.current);
             //System.out.println("L'evento successivo doveva avvenire all'istante: " + t.next);
             //System.out.println("I due tempi coincidono, quindi andiamo a processare l'evento " + e);
+            if (e == ALL_EVENTS_WITH_SAVE_STAT_VERIFICA) {
+            	System.out.println("\n--------- EVENTO: CAMBIO TASSO DI ARRIVO -------------");
+                
+                double oldLambda = currentLambda;
+                currentPhase++; // Passa alla fase/fascia successiva
+                
+                // 1. Aggiorna il valore di lambda e schedula il cambio successivo
+                if (currentPhase == 2) { 
+                    currentLambda = LAMBDA2; 
+                    events[ALL_EVENTS_WITH_SAVE_STAT_VERIFICA].t = 7200.0; 
+                } else if (currentPhase == 3) { 
+                    currentLambda = LAMBDA3; 
+                    events[ALL_EVENTS_WITH_SAVE_STAT_VERIFICA].t = 10800.0; 
+                } else if (currentPhase == 4) { 
+                    currentLambda = LAMBDA4; 
+                    events[ALL_EVENTS_WITH_SAVE_STAT_VERIFICA].t = 14400.0; 
+                } else if (currentPhase == 5) { 
+                    currentLambda = LAMBDA5; 
+                    events[ALL_EVENTS_WITH_SAVE_STAT_VERIFICA].x = 0; // Disattiva gli eventi di cambio tasso (fase finale)
+                }
 
-            if (e == ALL_EVENTS_VERIFICA) {
+                // 2. RISCHEDULAZIONE DELL'ARRIVO PENDENTE (Riscalamento del tempo residuo)
+                if (events[INDEX_ARRIVAL_SICUREZZA].x == 1) {
+                    // Calcola il tempo residuo d'attesa secondo il vecchio tasso
+                    double tempoResiduoVecchio = events[INDEX_ARRIVAL_SICUREZZA].t - t.current;
+                    
+                    // Riscala il tempo residuo in proporzione al cambio di tasso
+                    double tempoResiduoNuovo = tempoResiduoVecchio * (oldLambda / currentLambda);
+                    
+                    // Aggiorna la variabile d'arrivo globale e il tempo nel calendario eventi
+                    sarrival = t.current + tempoResiduoNuovo;
+                    events[INDEX_ARRIVAL_SICUREZZA].t = sarrival;
+                    
+                    // Disattiva l'arrivo se supera il tempo limite di STOP
+                    if (events[INDEX_ARRIVAL_SICUREZZA].t > STOP) {
+                        events[INDEX_ARRIVAL_SICUREZZA].x = 0;
+                    }
+                }
+            	//System.out.println("Prossimo evento di SAVE_STAT: " + events[ALL_EVENTS].t);
+            } else if (e == ALL_EVENTS_VERIFICA) {
             	System.out.println("\n---------L'EVENTO è il SALVATAGGIO STATISTICHE TRANSITORIO-------------");
             	/*double responseTimeSicurezza = nodeAreaSicurezza/totalSicurezzaCheck;
             	double responseTimeBiglietteria = nodeAreaBiglietteria/totalBiglietteriaCheck;
@@ -216,12 +260,8 @@ public class TransientController {
             } else if (e == INDEX_ARRIVAL_SICUREZZA) { //e == 0
             	System.out.println("\n---------L'EVENTO è UN NUOVO ARRIVO NEL CENTRO SICUREZZA-------------");
             	totalJobsInSicurezza++;
-            	/*System.out.println("Job nel nodo Login: " + totalJobsInLogin);
-            	System.out.println("Numero di serventi della coda Login: " + SERVERS_LOGIN);
             	
-            	System.out.println("------(Intanto pianifico il nuovo evento di arrivo, che sarà alla coda Login)");*/
-            	events[INDEX_ARRIVAL_SICUREZZA].t = getArrival(rng, sicurezza.getStreamIndex(), t.current);
-            	//System.out.println("--------(Sarà un arrivo in coda Login, all'istante: " + events[0].t + ")");
+            	events[INDEX_ARRIVAL_SICUREZZA].t = getArrival(rng, sicurezza.getStreamIndex(), currentLambda);
             	if (events[INDEX_ARRIVAL_SICUREZZA].t > STOP) {
             		events[INDEX_ARRIVAL_SICUREZZA].x = 0;
             	} 
@@ -243,14 +283,12 @@ public class TransientController {
             	System.out.println("\n---------L'EVENTO è UN NUOVO ARRIVO NEL CENTRO BIGLIETTERIA-------------");
             	events[e].x = 0;//disattivazione dell'evento di arrivo
             	
-            	//System.out.println("\n--------------L'EVENTO è UN NUOVO ARRIVO ALLA CODA DI ULTIMATE TEAM----------");
             	totalJobsInBiglietteria++;
-            	/*System.out.println("Elementi nel centro Ultimate Team: " + totalJobsInUltimateTeam);
-            	System.out.println("Numero di server della coda Ultimate Team: " + SERVERS_ULTIMATE_TEAM);*/
+            	
             	
             	if (totalJobsInBiglietteria <= SERVERS_BIGLIETTERIA) { //verifico se posso essere servito subito
             		service = getServiceBiglietteria(rng, biglietteria.getStreamIndex(), biglietteria.getServiceTime(), rvms);
-            		//System.out.println("Si cerca un server libero tra i " + SERVERS_ULTIMATE_TEAM);
+            		
             		s = findBiglietteriaServer(events);
             		//System.out.println("Abbiamo trovato il server numero " + s);
             		sum[s].service += service;
@@ -266,12 +304,11 @@ public class TransientController {
             	
             	System.out.println("\n--------------L'EVENTO è UN NUOVO ARRIVO ALLA CODA DI CONTROLLI----------");
             	totalJobsInControlli++;
-            	/*System.out.println("Elementi nel centro Stagioni: " + totalJobsInStagioni);
-            	System.out.println("Numero di server della coda Stagioni: " + SERVERS_STAGIONI);*/
+            	
             	
             	if (totalJobsInControlli <= SERVERS_CONTROLLI) { //verifico se posso essere servito subito
             		service = getServiceControlli(rng, controlli.getStreamIndex(), controlli.getServiceTime(), rvms);
-            		//System.out.println("Si cerca un server libero tra i " + SERVERS_STAGIONI);
+            		
             		s = findControlliServer(events);
             		//System.out.println("Abbiamo trovato il server numero " + s);
             		sum[s].service += service;
@@ -290,7 +327,7 @@ public class TransientController {
             	
             	if (totalJobsInMario <= SERVERS_MARIO) { //verifico se posso essere servito subito
             		service = getServiceMario(rng, mario_kart.getStreamIndex(), mario_kart.getServiceTime(), rvms);
-            		//System.out.println("Si cerca un server libero tra i " + SERVERS_CLUB);
+            		
             		s = findMarioKartServer(events);
             		//System.out.println("Abbiamo trovato il server numero " + s);
             		sum[s].service += service;
@@ -309,7 +346,7 @@ public class TransientController {
             	
             	if (totalJobsInHP <= SERVERS_HP) { //verifico se posso essere servito subito
             		service = getServiceHP(rng, harry_potter.getStreamIndex(), harry_potter.getServiceTime(), rvms);
-            		//System.out.println("Si cerca un server libero tra i " + SERVERS_CLUB);
+            		
             		s = findHarryPotterServer(events);
             		//System.out.println("Abbiamo trovato il server numero " + s);
             		sum[s].service += service;
@@ -320,40 +357,28 @@ public class TransientController {
                     //System.out.println("Il server " + s + " avrà completato all'istante " + events[s].t);
                     events[s].x = 1;
             	}
-            } else if ((e >= INDEX_FIRST_SERVER_SICUREZZA) && (e <= INDEX_LAST_SERVER_SICUREZZA)) { //eventi dei server di Login, 1 e 12
+            } else if ((e >= INDEX_FIRST_SERVER_SICUREZZA) && (e <= INDEX_LAST_SERVER_SICUREZZA)) { 
             	System.out.println("\n------L'EVENTO è IL COMPLETAMENTO DI UN SERVENTE AL CENTRO SICUREZZA------------------");
             	
             	if (firstCompletionSicurezza == 0) { //salviamo il primo completamento per le statistiche 
             		firstCompletionSicurezza = t.current; 
             	}
-            	boolean abandon = false;
-            	if (abandon == true) { //se l'utente non supera i controlli
-            		//System.out.println("L'utente non ha superato i controlli del Login");
-            		double abandonTime = t.current + 0.01;//si aggiunge 0.01 per realizzare l'evento il prima possibile
-            		//System.out.println("Prossimo evento di abbandono: " + abandonTime);
-            		//dropoutsLoginQueue.add(abandonTime); //si aggiunge l'abbandono alla lista di abbandoni	
+            	boolean prova = false;
+            	if (prova == true) { 
+            		double provaTime = t.current + 0.01;//si aggiunge 0.01 per realizzare l'evento il prima possibile
+            			
             	}
             	else {
             		int percorsi = generateBiglietteriaDestination(rng, sicurezza.getStreamIndex());
             		totalJobsInSicurezza--;//diminuisco di 1 il numero di utenti in questo centro
             		totalSicurezzaCheck++;//aumento il numero di utenti serviti in questo centro
-                	/*System.out.println("Utenti serviti nel Login: " + totalLoginCheck);
-                	System.out.println("Utenti ancora nel Login: " + totalJobsInLogin);*/
-                	
-                	//int percorsi = generateDestination(rng, loginNode.getStreamIndex());
-            		/*if (percorsi == -1) { //se l'utente non supera i controlli
-                		//System.out.println("L'utente non ha superato i controlli del Login");
-                		double abandonTime = t.current + 0.01;//si aggiunge 0.01 per realizzare l'evento il prima possibile
-                		//System.out.println("Prossimo evento di abbandono: " + abandonTime);
-                		dropoutsLoginQueue.add(abandonTime); //si aggiunge l'abbandono alla lista di abbandoni	
-                	}*/
                 	               	
             		if (percorsi == 0) {
-                		//System.out.println("L'utente andrà in coda Ultimate Team");            		
-                	    events[INDEX_ARRIVAL_BIGLIETTERIA].t = t.current; //aggiunto un evento alla coda Biglietteria
+                		            		
+                	    events[INDEX_ARRIVAL_BIGLIETTERIA].t = t.current; 
                 		events[INDEX_ARRIVAL_BIGLIETTERIA].x = 1; //attivazione dell'evento
                 	} else if (percorsi == 1) {
-                		//System.out.println("L'utente andrà in coda Club");            		
+                		            		
                 	    events[INDEX_ARRIVAL_CONTROLLI].t = t.current; //aggiunto un evento alla coda Controlli
                 		events[INDEX_ARRIVAL_CONTROLLI].x = 1; //attivazione dell'evento	
                 	}
@@ -361,41 +386,38 @@ public class TransientController {
                 	s = e;
                 	
                 	if (totalJobsInSicurezza >= SERVERS_SICUREZZA) {//ci sono ancora elementi in coda
-                		//System.out.println("Ci sono degli elementi in coda Login da servire, ma ora il server " + s + " si è liberato");
+                		
                 		service = getServiceSicurezza(rng, sicurezza.getStreamIndex(), sicurezza.getServiceTime(), rvms);
                 		sum[s].service += service;
                         sum[s].served++;
                         events[s].t = t.current + service;
                         //System.out.println("Il server " + s + " concluderà all'istante " + events[s].t);
                 	} else { //altrimenti, se non ci sono persone in coda
-                		//System.out.println("Non ci sono altri elementi in coda Login, il server " + s + " diventa disponibile");
+                		
                       	events[s].x = 0; //il server diventa libero	
                 	}
             	}
-        	} else if ((e >= INDEX_FIRST_SERVER_BIGLIETTERIA) && (e <= INDEX_LAST_SERVER_BIGLIETTERIA)) { //eventi dei server di Ultimate Team, 15 E 27
+        	} else if ((e >= INDEX_FIRST_SERVER_BIGLIETTERIA) && (e <= INDEX_LAST_SERVER_BIGLIETTERIA)) { 
         		System.out.println("\n------L'EVENTO è IL COMPLETAMENTO DI UN SERVENTE ALLA BIGLIETTERIA------------------");
             	if (firstCompletionBiglietteria == 0) { //salviamo il primo completamento per le statistiche 
             		firstCompletionBiglietteria = t.current; 
             	}
             	
-            	boolean abandon = generateAbandon(rng, biglietteria.getStreamIndex(), not_P5);//qua si decide se l'utente abbandona oppure supera i controlli
-            	if (abandon) { //se l'utente non supera i controlli
-            		//System.out.println("L'utente non ha superato i controlli di Ultimate Team");
-            		double abandonTime = t.current + 0.01;//si aggiunge 0.01 per realizzare l'evento il prima possibile
-            		//System.out.println("Prossimo evento di abbandono: " + abandonTime);
-            		//dropoutsUltimateTeamQueue.add(abandonTime); //si aggiunge l'abbandono alla lista di abbandoni	
+            	boolean prova = false;
+            	if (prova) { 
+            		double provaTime = t.current + 0.01;//si aggiunge 0.01 per realizzare l'evento il prima possibile
+            			
             	}
             	else {
             		totalJobsInBiglietteria--;//diminuisco di 1 il numero di utenti in coda in questo centro
             		totalBiglietteriaCheck++;//aumento il numero di utenti serviti in questo centro
-                	/*System.out.println("Utenti serviti nella coda Ultimate Team: " + totalUltimateTeamCheck);
-                	System.out.println("Utenti ancora in UltimateTeam: " + totalJobsInUltimateTeam);*/
+                	
             		events[INDEX_ARRIVAL_CONTROLLI].t = t.current; //aggiunto un evento alla coda Controlli
             		events[INDEX_ARRIVAL_CONTROLLI].x = 1;
                 	s = e;
                 	
                 	if (totalJobsInBiglietteria >= SERVERS_BIGLIETTERIA) {//ci sono ancora elementi in coda
-                		//System.out.println("Ci sono degli elementi in coda Ultimate Teame da servire, ma ora il server " + s + " si è liberato");
+                		
                 		service = getServiceBiglietteria(rng, biglietteria.getStreamIndex(), biglietteria.getServiceTime(), rvms);
                 		sum[s].service += service;
                         sum[s].served++;
@@ -407,25 +429,22 @@ public class TransientController {
                 	}
             	}
             	
-            } else if ((e >= INDEX_FIRST_SERVER_CONTROLLI) && (e <= INDEX_LAST_SERVER_CONTROLLI)) { //eventi dei server di Stagioni, 30 e 33
+            } else if ((e >= INDEX_FIRST_SERVER_CONTROLLI) && (e <= INDEX_LAST_SERVER_CONTROLLI)) { 
             	System.out.println("\n------L'EVENTO è IL COMPLETAMENTO DI UN SERVENTE DI CONTROLLI------------------");
             	if (firstCompletionControlli == 0) { //salviamo il primo completamento per le statistiche 
             		firstCompletionControlli = t.current; 
             	}
             	
-            	boolean abandon = generateAbandon(rng, controlli.getStreamIndex(), not_P6);//qua si decide se l'utente abbandona oppure supera i controlli
-            	if (abandon) { //se l'utente non supera i controlli
-            		//System.out.println("L'utente non ha superato i controlli di Stagioni");
-            		double abandonTime = t.current + 0.01;//si aggiunge 0.01 per realizzare l'evento il prima possibile
-            		//System.out.println("Prossimo evento di abbandono: " + abandonTime);
-            		//dropoutsStagioniQueue.add(abandonTime); //si aggiunge l'abbandono alla lista di abbandoni	
+            	
+            	boolean prova = false;
+            	if (prova) { 
+            		double provaTime = t.current + 0.01;//si aggiunge 0.01 per realizzare l'evento il prima possibile
+            			
             	}
             	else {
             		totalJobsInControlli--;//diminuisco di 1 il numero di utenti in coda in questo centro
             		totalControlliCheck++;//aumento il numero di utenti serviti in questo centro
-                	/*System.out.println("Utenti serviti nella coda di Stagioni: " + totalStagioniCheck);
-                	System.out.println("Utenti ancora in Stagioni: " + totalJobsInStagioni);*/
-                    
+                	
             		int percorsi = generateAttractionsDestination(rng, controlli.getStreamIndex());
                 	if (percorsi == 0) {
                 		events[INDEX_ARRIVAL_MARIO].t = t.current; 
@@ -447,63 +466,57 @@ public class TransientController {
                         events[s].t = t.current + service; 
                         //System.out.println("Il server " + s + " concluderà all'istante " + events[s].t);
                 	} else { //altrimenti, se non ci sono persone in coda
-                		//System.out.println("Non ci sono altri elementi in coda Stagioni, il server " + s + " diventa disponibile");
+                		
                       	events[s].x = 0; //il server diventa libero	
                 	}
             	}
             	
-            } else if ((e >= INDEX_FIRST_SERVER_MARIO_VERIFICA) && (e <= INDEX_LAST_SERVER_MARIO_VERIFICA)) { //eventi dei server di Club, 36 e 40
+            } else if ((e >= INDEX_FIRST_SERVER_MARIO_VERIFICA) && (e <= INDEX_LAST_SERVER_MARIO_VERIFICA)) {
             	System.out.println("\n------L'EVENTO è IL COMPLETAMENTO DEL SERVENTE DI MARIO KART------------------");
             	if (firstCompletionMario == 0) { //salviamo il primo completamento per le statistiche 
             		firstCompletionMario = t.current; 
             	}
             	
-            	boolean abandon = generateAbandon(rng, mario_kart.getStreamIndex(), not_P7);//qua si decide se l'utente abbandona oppure supera i controlli
-            	if (abandon) { //se l'utente non supera i controlli
-            		//System.out.println("L'utente non ha superato i controlli di Club");
-            		double abandonTime = t.current + 0.01;//si aggiunge 0.01 per realizzare l'evento il prima possibile
-            		//System.out.println("Prossimo evento di abbandono: " + abandonTime);
-            		//dropoutsClubQueue.add(abandonTime); //si aggiunge l'abbandono alla lista di abbandoni	
+            	boolean prova = false;
+            	if (prova) { //se l'utente non supera i controlli
+            		
+            		double provaTime = t.current + 0.01;
+            			
             	}
             	else {
             		totalJobsInMario--;//diminuisco di 1 il numero di utenti in questo centro
             		totalMarioCheck++;//aumento il numero di utenti serviti in questo centro
-                	/*System.out.println("Utenti serviti nel Club: " + totalClubCheck);
-                	System.out.println("Utenti ancora nel Club: " + totalJobsInClub);*/
+                	
                 	
                 	s = e;
                 	
                 	if (totalJobsInMario >= SERVERS_MARIO) {//ci sono ancora elementi in coda
-                		//System.out.println("Ci sono degli elementi Club da servire, ma ora il server " + s + " si è liberato");
+                		
                 		service = getServiceMario(rng, mario_kart.getStreamIndex(), mario_kart.getServiceTime(), rvms);
                 		sum[s].service += service;
                         sum[s].served++;
                         events[s].t = t.current + service;
                         //System.out.println("Il server " + s + " concluderà all'istante " + events[s].t);
                 	} else { //altrimenti, se non ci sono persone in coda
-                		//System.out.println("Non ci sono altri elementi in coda ProClub, il server " + s + " diventa disponibile");
+                		
                       	events[s].x = 0; //il server diventa libero	
                 	}
             	}
             	
-            } else if ((e >= INDEX_FIRST_SERVER_HP_VERIFICA) && (e <= INDEX_LAST_SERVER_HP_VERIFICA)) { //eventi dei server di Club, 36 e 40
+            } else if ((e >= INDEX_FIRST_SERVER_HP_VERIFICA) && (e <= INDEX_LAST_SERVER_HP_VERIFICA)) { 
             	System.out.println("\n------L'EVENTO è IL COMPLETAMENTO DEL SERVENTE DI HARRY POTTER------------------");
             	if (firstCompletionHP == 0) { //salviamo il primo completamento per le statistiche 
             		firstCompletionHP = t.current; 
             	}
             	
-            	boolean abandon = generateAbandon(rng, mario_kart.getStreamIndex(), not_P7);//qua si decide se l'utente abbandona oppure supera i controlli
-            	if (abandon) { //se l'utente non supera i controlli
-            		//System.out.println("L'utente non ha superato i controlli di Club");
-            		double abandonTime = t.current + 0.01;//si aggiunge 0.01 per realizzare l'evento il prima possibile
-            		//System.out.println("Prossimo evento di abbandono: " + abandonTime);
-            		//dropoutsClubQueue.add(abandonTime); //si aggiunge l'abbandono alla lista di abbandoni	
+            	boolean prova = false;
+            	if (prova) { 
+            		double provaTime = t.current + 0.01;//si aggiunge 0.01 per realizzare l'evento il prima possibile
+            			
             	}
             	else {
             		totalJobsInHP--;//diminuisco di 1 il numero di utenti in questo centro
             		totalHPCheck++;//aumento il numero di utenti serviti in questo centro
-                	/*System.out.println("Utenti serviti nel Club: " + totalClubCheck);
-                	System.out.println("Utenti ancora nel Club: " + totalJobsInClub);*/
                 	
                 	s = e;
                 	
@@ -515,25 +528,11 @@ public class TransientController {
                         events[s].t = t.current + service;
                         //System.out.println("Il server " + s + " concluderà all'istante " + events[s].t);
                 	} else { //altrimenti, se non ci sono persone in coda
-                		//System.out.println("Non ci sono altri elementi in coda ProClub, il server " + s + " diventa disponibile");
+                		
                       	events[s].x = 0; //il server diventa libero	
                 	}
             	}	
-            } /*else if (e == INDEX_DROPOUT_ULTIMATE_TEAM) { //e == 28
-            	System.out.println("\n------L'EVENTO è L'ABBANDONO DELLA CODA ULTIMATE TEAM------------");
-            	dropoutsUltimateTeam++;
-            	dropoutsUltimateTeamQueue.remove(0);
-            	
-            } else if (e == INDEX_DROPOUT_STAGIONI) { //e == 34
-            	System.out.println("\n------L'EVENTO è L'ABBANDONO DELLA CODA STAGIONI------------");
-            	dropoutsStagioni++;
-            	dropoutsStagioniQueue.remove(0);
-            	
-            } else if (e == INDEX_DROPOUT_CLUB) { //e == 41
-            	System.out.println("\n------L'EVENTO è L'ABBANDONO DELLA CODA CLUB------------");
-            	dropoutsClub++;
-            	dropoutsClubQueue.remove(0);	
-            }*/
+            } 
         }
         
 		rng.selectStream(255);
@@ -569,10 +568,17 @@ public class TransientController {
 		}
 	}
 	
-	static boolean generateAbandon(Rngs rngs, int streamIndex, double percentage) {
-        rngs.selectStream(2 + streamIndex);
-        return rngs.random() <= percentage;
-    }
+	static boolean generateQueueDestination(Rngs rngs, int streamIndex) {
+		rngs.selectStream(5 + streamIndex);
+		double r = rngs.random(); 
+		
+		if (r < 0.20) {
+			return  true;
+		}
+		else {
+			return false;
+		}
+	}
 	
 	private int generateBiglietteriaDestination(Rngs rngs, int streamIndex) {
 	    rngs.selectStream(3 + streamIndex);
@@ -589,11 +595,11 @@ public class TransientController {
 		rngs.selectStream(4 + streamIndex);
 	    double r = rngs.random();
 
-	    if (r < 0.25) { // Mario Kart 15%
+	    if (r < 0.25) { // Mario Kart 25%
 	        return 0;   
 	    } else if (r < 0.55) { // Harry Potter 30%
 	        return 1;  
-	    } else { // Altre attrazioni 55%
+	    } else { // Altre attrazioni 45%
 	        return 2;
 	    } 
 	}
@@ -612,7 +618,7 @@ public class TransientController {
             i++;                       
         s = i;
         //System.out.println("Un servente candidato è il servente " + s);
-        while (i < INDEX_LAST_SERVER_SICUREZZA) { //i < 12, perché i server login sono da 1 a 12 ma si entra già facendo i++ quindi deve essere minore stretto di 12  
+        while (i < INDEX_LAST_SERVER_SICUREZZA) {   
             i++;                                             
             if ((event[i].x == 0) && (event[i].t < event[s].t))
                 s = i;
@@ -632,7 +638,7 @@ public class TransientController {
         while (event[i].x == 1)  
             i++;                  
         s = i;
-        while (i < INDEX_LAST_SERVER_BIGLIETTERIA) { //i < 27, perché i server di Ultimate Team sono da 15 a 27 
+        while (i < INDEX_LAST_SERVER_BIGLIETTERIA) { 
         	i++;                                           
             if ((event[i].x == 0) && (event[i].t < event[s].t))
                 s = i;
@@ -674,7 +680,7 @@ public class TransientController {
             i++;                       
         s = i;
         //System.out.println("Un servente candidato è il servente " + s);
-        while (i < INDEX_LAST_SERVER_MARIO_VERIFICA) { //i < 38, perché i server di Club sono da 34 a 38 ma si entra già facendo i++ quindi deve essere minore stretto di 14  
+        while (i < INDEX_LAST_SERVER_MARIO_VERIFICA) {   
             i++;                                             
             if ((event[i].x == 0) && (event[i].t < event[s].t))
                 s = i;
@@ -805,28 +811,12 @@ public class TransientController {
 		    z = t - (p / q);
 		return (m + s * z);
 	    }
-
 	
-	//funzione per generare il prossimo arrivo
-	private double getArrival(Rngs r, int streamIndex, double currentTime) {
-		r.selectStream(1 + streamIndex);
-		double lambda = 0.0;
-		if (currentTime < 3600) {
-		    lambda = LAMBDA1;
-		} else if (currentTime < 7200) {
-		    lambda = LAMBDA2;
-		} else if (currentTime < 10800) {
-		    lambda = LAMBDA3;
-		} else if (currentTime < 14400) {
-		    lambda = LAMBDA4;
-		} else if (currentTime < 18000) {
-		    lambda = LAMBDA5;
-		}
-        sarrival+= exponential(1.0/lambda, r);
-		//sarrival+= exponential(1/LAMBDA, r);
-
-        return (sarrival);
-    }
+	private double getArrival(Rngs r, int streamIndex, double currentLambda) {
+	    r.selectStream(1 + streamIndex);
+	    sarrival += exponential(1.0 / currentLambda, r);
+	    return sarrival;
+	}
 	
 	private int nextEvent(MsqEvent[] event) {
 		//System.out.println("Ricerca in corso del prossimo evento da elaborare...");
@@ -835,7 +825,7 @@ public class TransientController {
 	    while (event[i].x == 0) 
 	    	i++;
 	    e = i;
-	    while (i < ALL_EVENTS_WITH_SAVE_STAT_VERIFICA -1) {
+	    while (i < ALL_EVENTS_STAT_LAMBDA_VERIFICA -1) {
 	    	i++;
 	    	if ((event[i].x == 1) && (event[i].t < event[e].t)) {
 	    		e = i;

@@ -15,7 +15,7 @@ import pmcsn.UniversalStudiosHollywood.model.ControlloSicurezzaNode;
 import pmcsn.UniversalStudiosHollywood.model.HarryPotterNode;
 import pmcsn.UniversalStudiosHollywood.model.MarioKartNode;
 import pmcsn.UniversalStudiosHollywood.model.TransientStats;
-import pmcsn.UniversalStudiosHollywood.model.Welford;
+//import pmcsn.UniversalStudiosHollywood.model.Welford; 
 import pmcsn.UniversalStudiosHollywood.utils.Estimate;
 import pmcsn.UniversalStudiosHollywood.utils.Rvgs;
 import pmcsn.UniversalStudiosHollywood.utils.Rvms;
@@ -33,7 +33,7 @@ public class ExperimentsProva {
     //static double COLUMNS = (STOP/INTERVAL_DATA) + 1;
  
     // Rapporti di pescaggio configurabili (es. 2 Standard : 1 Express)
-    private static final int MARIO_RATIO_STANDARD = 2;
+    private static final int MARIO_RATIO_STANDARD = 3;
     private static final int MARIO_RATIO_EXPRESS = 1;
 
     private static final int HP_RATIO_STANDARD = 3;
@@ -48,13 +48,13 @@ public class ExperimentsProva {
 		// Intestazione del file CSV di esperimento
 	    initCsvExperimentsHeader(filenameExperiments);
 	    
-	    Welford wSicurezza = new Welford();
+	    /*Welford wSicurezza = new Welford();
 	    Welford wBiglietteria = new Welford();
 	    Welford wControlli = new Welford();
 	    Welford wMarioStandard = new Welford();
 	    Welford wMarioExpress = new Welford();
 	    Welford wHPStandard = new Welford();
-	    Welford wHPExpress = new Welford();
+	    Welford wHPExpress = new Welford();*/
 
 		List<Double> meanSicurezza = new ArrayList<>();
 		List<Double> meanBiglietteria = new ArrayList<>();
@@ -78,13 +78,13 @@ public class ExperimentsProva {
 	        // Passa al seed successivo per l'iterazione i+1
 	        seeds[i+1] = (long) runMeans[0]; // Salviamo il nuovo seed generato
 			
-			wSicurezza.add(runMeans[1]);
+			/*wSicurezza.add(runMeans[1]);
 	        wBiglietteria.add(runMeans[2]);
 	        wControlli.add(runMeans[3]);
 	        wMarioStandard.add(runMeans[4]);
 	        wMarioExpress.add(runMeans[5]);
 	        wHPStandard.add(runMeans[6]);
-	        wHPExpress.add(runMeans[7]);
+	        wHPExpress.add(runMeans[7]);*/
 	        
 	     // Liste per Estimate
 		    meanSicurezza.add(runMeans[1]);
@@ -99,13 +99,13 @@ public class ExperimentsProva {
 		
 		System.out.println("===== MEDIE CAMPIONARIE =====");
 
-		System.out.println("Sicurezza: " + wSicurezza.getMean());
+		/*System.out.println("Sicurezza: " + wSicurezza.getMean());
 		System.out.println("Biglietteria: " + wBiglietteria.getMean());
 		System.out.println("Controlli: " + wControlli.getMean());
 		System.out.println("Mario Kart Standard: " + wMarioStandard.getMean());
 		System.out.println("Mario Kart Express: " + wMarioExpress.getMean());
 		System.out.println("Harry Potter Standard: " + wHPStandard.getMean());
-		System.out.println("Harry Potter Express: " + wHPExpress.getMean());
+		System.out.println("Harry Potter Express: " + wHPExpress.getMean());*/
 		
 		String directory = "experiments_output";
 		writeFile(meanSicurezza, directory, "sicurezza_attesa_coda");
@@ -1062,7 +1062,7 @@ public class ExperimentsProva {
 	/**
 	 * Funzione Helper per selezionare la prossima coda da servire (Quota + Fallback)
 	 */
-	private boolean selectNextQueue(int jobsStandard, int jobsExpress, boolean currentlyServingStandard, 
+	/*private boolean selectNextQueue(int jobsStandard, int jobsExpress, boolean currentlyServingStandard, 
 	                                int consecutiveServed, int ratioStd, int ratioExp) {
 	    if (jobsStandard == 0) return false; // Coda Standard vuota -> Serve Express
 	    if (jobsExpress == 0) return true;   // Coda Express vuota -> Serve Standard
@@ -1072,7 +1072,7 @@ public class ExperimentsProva {
 	    } else {
 	        return consecutiveServed >= ratioExp;
 	    }
-	}
+	}*/
 	
 	private double getServiceSicurezza(Rngs r, int streamIndex, double meanServiceTime, Rvms rvms) {
         r.selectStream(streamIndex);
