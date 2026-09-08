@@ -5,10 +5,8 @@ import java.util.Scanner;
 
 
 import pmcsn.UniversalStudiosHollywood.controller.ExperimentsController;
-import pmcsn.UniversalStudiosHollywood.controller.ExperimentsProva;
 import pmcsn.UniversalStudiosHollywood.controller.TransientController;
 import pmcsn.UniversalStudiosHollywood.controller.VerificaControllerNew;
-import pmcsn.UniversalStudiosHollywood.utils.Autocorrelation;
 
 public class App {
 	
@@ -47,18 +45,6 @@ public class App {
         	System.exit(0);
         }
     	
-    	/*VerificaControllerNew vc = new VerificaControllerNew();
-    	vc.startAnalysis();
-    	Autocorrelation a = new Autocorrelation();
-    	try {
-			a.startCalculate();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
-    	/*TransientController tc = new TransientController();
-    	tc.startAnalysis();*/
-    	/*ExperimentsProva ec = new ExperimentsProva();
-    	ec.startAnalysis(); */       
+    	       
     }
 }
