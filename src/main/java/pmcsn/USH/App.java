@@ -47,18 +47,6 @@ public class App {
         	System.exit(0);
         }
     	
-    	/*VerificaControllerNew vc = new VerificaControllerNew();
-    	vc.startAnalysis();
-    	Autocorrelation a = new Autocorrelation();
-    	try {
-			a.startCalculate();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}*/
-    	/*TransientController tc = new TransientController();
-    	tc.startAnalysis();*/
-    	/*ExperimentsController ec = new ExperimentsController();
-    	ec.startAnalysis();*/        
+    	        
     }
 }
